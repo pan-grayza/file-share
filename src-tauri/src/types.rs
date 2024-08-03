@@ -15,14 +15,13 @@ pub enum Error {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum LinkDirectoryError {
+pub enum FileError {
     #[error("failed to open file")]
     FileOpenError(#[from] std::io::Error),
-
-    #[error("failed to parse TOML")]
-    TomlParseError(#[from] toml::de::Error),
-    #[error("failed to parse TOML")]
-    TomlSerializeError(#[from] toml::ser::Error),
+    #[error("failed serialize json json")]
+    SerdeJsonError(#[from] serde_json::Error),
+    // #[error("failed to parse TOML")]
+    // TomlSerializeError(#[from] toml::ser::Error),
 }
 
 // we must manually implement serde::Serialize
@@ -34,7 +33,7 @@ impl serde::Serialize for Error {
         serializer.serialize_str(self.to_string().as_ref())
     }
 }
-impl serde::Serialize for LinkDirectoryError {
+impl serde::Serialize for FileError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::ser::Serializer,

@@ -19,7 +19,7 @@
     statusVaultPath = await invoke("link_directory", {path: newVaultPath, name: newVaultName});
   }
   async function get_linked_paths() {
-    linked_paths = await invoke<LinkedPath[]>("get_linked_paths").then((paths) => console.log(paths[0]))
+    await invoke<LinkedPath[]>("get_linked_paths").then((paths) => linked_paths = paths)
   .catch((e) => console.error(e));
   }
   get_linked_paths();

@@ -3,17 +3,18 @@ mod types;
 
 //Uses
 use rfd::FileDialog;
+// use serde_json::json;
+use std::fs;
 use std::fs::*;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use types::{Error, LinkDirectoryError, LinkedPath};
+use types::{Error, FileError, LinkedPath};
 
-const VAULT_PATH: &str = "vault/paths.toml";
+const VAULT_PATH: &str = "vault/paths.json";
 
-fn open_and_read_file(path: &str) -> Result<String, Error> {
-    let mut paths_config = File::open(path)?;
-    let mut config_contents = String::new();
-    paths_config.read_to_string(&mut config_contents)?;
+fn open_and_read_path_file() -> Result<Vec<LinkedPath>, FileError> {
+    let data = fs::read_to_string(VAULT_PATH).unwrap();
+    let config_contents: Vec<LinkedPath> = serde_json::from_str(&data)?;
     Ok(config_contents)
 }
 
@@ -22,7 +23,6 @@ fn select_directory() -> Result<PathBuf, Error> {
     let selected_dir: Option<PathBuf> = FileDialog::new().set_directory(".").pick_folder();
     match selected_dir {
         Some(path) => {
-            println!("{}", path.display());
             return Ok(path);
         }
         None => return Ok(PathBuf::from("")),
@@ -30,10 +30,9 @@ fn select_directory() -> Result<PathBuf, Error> {
 }
 
 #[tauri::command]
-fn link_directory(path: String, name: String) -> Result<String, LinkDirectoryError> {
+fn link_directory(path: String, name: String) -> Result<String, FileError> {
     // Open a file and read it contents
-    let config_contents = open_and_read_file(VAULT_PATH).unwrap();
-    let mut linked_paths: Vec<LinkedPath> = toml::from_str(&config_contents)?;
+    let mut linked_paths = open_and_read_path_file().unwrap();
     if name == "" {
         return Ok("Name your vault".to_string());
     };
@@ -51,39 +50,30 @@ fn link_directory(path: String, name: String) -> Result<String, LinkDirectoryErr
     };
     //Write new path
     linked_paths.push(new_linked_path);
-    let toml_string = toml::to_string(&linked_paths)?;
-    let mut file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .open(VAULT_PATH)?;
-    file.write_all(toml_string.as_bytes())?;
+    let data = serde_json::to_string(&linked_paths).unwrap();
+    fs::write(VAULT_PATH, data).unwrap();
 
     Ok("Directory linked successfully".to_string())
 }
 
 #[tauri::command]
-fn remove_directory(linked_path_name: String) -> Result<String, LinkDirectoryError> {
+fn remove_directory(linked_path_name: String) -> Result<String, FileError> {
     // Open a file and read it contents
-    let config_contents = open_and_read_file(VAULT_PATH).unwrap();
-    let mut linked_paths: Vec<LinkedPath> = toml::from_str(&config_contents)?;
+    let mut linked_paths = open_and_read_path_file().unwrap();
     //Delete LinkedPath
     linked_paths.retain(|path| path.name != linked_path_name);
-    let toml_string = toml::to_string(&linked_paths)?;
-    let mut file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .open(VAULT_PATH)?;
-    file.write_all(toml_string.as_bytes())?;
+
+    let data = serde_json::to_string(&linked_paths).unwrap();
+    fs::write(VAULT_PATH, data).unwrap();
 
     Ok("Directory removed successfully".to_string())
 }
 
 #[tauri::command]
-fn get_linked_paths() -> Result<Vec<LinkedPath>, LinkDirectoryError> {
+fn get_linked_paths() -> Result<Vec<LinkedPath>, FileError> {
     // Open a file and read it contents
-    let config_contents = open_and_read_file(VAULT_PATH).unwrap();
-    let linked_paths: Vec<LinkedPath> = toml::from_str(&config_contents)?;
-    println!("{}", linked_paths[0].name);
+    let linked_paths = open_and_read_path_file().unwrap();
+    // println!("{}", linked_paths[0].name);
 
     Ok(linked_paths)
 }
@@ -103,11 +93,12 @@ pub fn run() {
             if !Path::new("vault").is_dir() {
                 create_dir("vault")?;
             }
-            if !Path::new("vault/paths.toml").exists() {
-                let linked_paths: Vec<LinkedPath> = vec![];
-                let toml_string = toml::to_string(&linked_paths)?;
-                let mut file = File::create("vault/paths.toml")?;
-                file.write_all(toml_string.as_bytes())?;
+            if !Path::new(VAULT_PATH).exists() {
+                let mut file = File::create(VAULT_PATH)?;
+                let linked_paths =
+                    serde_json::to_string_pretty::<Vec<LinkedPath>>(&vec![]).unwrap();
+
+                file.write_all(linked_paths.as_bytes()).unwrap();
             }
 
             Ok(())
