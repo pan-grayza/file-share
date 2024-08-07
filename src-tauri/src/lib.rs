@@ -7,8 +7,12 @@ use rfd::FileDialog;
 use std::fs;
 use std::fs::*;
 use std::io::prelude::*;
+use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use tokio::sync::oneshot;
 use types::{Error, FileError, LinkedPath};
+use warp::Filter;
 
 const VAULT_PATH: &str = "vault/paths.json";
 
@@ -78,17 +82,84 @@ fn get_linked_paths() -> Result<Vec<LinkedPath>, FileError> {
     Ok(linked_paths)
 }
 
+#[tauri::command]
+async fn start_file_server(
+    stop_tx: tauri::State<'_, Arc<Mutex<Option<oneshot::Sender<()>>>>>,
+) -> Result<String, String> {
+    let dir_path = PathBuf::from("C:\\Users\\pasna\\Stepan\\Code");
+
+    if !dir_path.exists() || !dir_path.is_dir() {
+        return Err("Directory does not exist".into());
+    }
+
+    let dir_filter = warp::fs::dir(dir_path);
+    let routes = warp::get().and(dir_filter);
+
+    let mut port = 8000;
+    loop {
+        let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
+
+        // Create a new oneshot channel for server shutdown
+        let (new_stop_tx, stop_rx) = oneshot::channel();
+        let mut stop_tx_lock = stop_tx.lock().unwrap();
+        *stop_tx_lock = Some(new_stop_tx);
+
+        // // Create the server with graceful shutdown
+        // let (bound_addr, server_future) =
+        //     warp::serve(routes.clone()).bind_with_graceful_shutdown(addr, async {
+        //         stop_rx.await.ok();
+        //     });
+
+        // Attempt to bind the server
+        match warp::serve(routes.clone()).try_bind_with_graceful_shutdown(addr, async {
+            stop_rx.await.ok();
+        }) {
+            Ok((bound_addr, server_future)) => {
+                // Spawn the server in a separate task
+                tokio::spawn(async move { server_future.await });
+
+                return Ok(format!("Server started at http://{}", addr));
+            }
+            Err(e) => {
+                eprintln!("Failed to bind to port {}: {:?}", port, e);
+                port += 1; // Increment the port and try again
+                continue; // Try the next port
+            }
+        }
+    }
+}
+
+#[tauri::command]
+async fn stop_file_server(
+    stop_tx: tauri::State<'_, Arc<Mutex<Option<oneshot::Sender<()>>>>>,
+) -> Result<String, String> {
+    let mut stop_tx_lock = stop_tx.lock().unwrap();
+    if let Some(tx) = stop_tx_lock.take() {
+        tx.send(())
+            .map_err(|_| "Failed to send stop signal".to_string())?;
+        println!("Im stopped!");
+        Ok("Server stopped".to_string())
+    } else {
+        println!("Im not stopped!");
+        Err("Server is not running".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let stop_tx: Arc<Mutex<Option<oneshot::Sender<()>>>> = Arc::new(Mutex::new(None));
     tauri::Builder::default()
+        .manage(stop_tx)
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             select_directory,
             link_directory,
             remove_directory,
             get_linked_paths,
+            start_file_server,
+            stop_file_server
         ])
-        .setup(|app| {
+        .setup(|_app| {
             // dbg!(scope.allowed());
             if !Path::new("vault").is_dir() {
                 create_dir("vault")?;

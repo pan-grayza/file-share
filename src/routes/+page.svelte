@@ -4,6 +4,7 @@
     let newVaultName = ''
     let newVaultPath = ''
     let statusVaultPath = ''
+    let serverStatus = ''
 
     async function select_directory() {
         newVaultPath = await invoke('select_directory')
@@ -13,6 +14,12 @@
             path: newVaultPath,
             name: newVaultName,
         })
+    }
+    async function start_server() {
+        serverStatus = await invoke('start_file_server')
+    }
+    async function stop_server() {
+        serverStatus = await invoke('stop_file_server')
     }
 </script>
 
@@ -28,6 +35,9 @@
         <p>{statusVaultPath}</p>
         <button type="submit">Link directory</button>
     </form>
+    <button on:click={start_server}>Start</button>
+    <button on:click={stop_server}>Stop</button>
+    <p>{serverStatus}</p>
 </div>
 
 <style>
