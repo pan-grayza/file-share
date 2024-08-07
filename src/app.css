@@ -8,7 +8,7 @@ body {
     height: 100%;
 }
 body {
-    padding-top: 30px;
+    padding-top: 32px;
 }
 
 :root {
@@ -27,15 +27,9 @@ body {
     -webkit-text-size-adjust: 100%;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        color: #f6f6f6;
-        background-color: #2f2f2f;
-    }
-}
 .titlebar {
-    height: 30px;
-    background: #329ea3;
+    height: 32px;
+    background: #efefef;
     user-select: none;
     display: flex;
     justify-content: flex-end;
@@ -49,11 +43,31 @@ body {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    width: 30px;
-    height: 30px;
+    width: 48px;
+    height: 32px;
     user-select: none;
     -webkit-user-select: none;
+    cursor: default;
+    outline: none;
+    border: none;
 }
 .titlebar-button:hover {
-    background: #5bbec3;
+    background-color: color(srgb 1 1 1 / 0.1);
+}
+.titlebar-button-close:hover {
+    background-color: #ef141f;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color: #f6f6f6;
+        background-color: #27272a;
+    }
+    .titlebar {
+        color: #f6f6f6;
+        background-color: #171717;
+    }
+    .titlebar-button {
+        color: #f6f6f6;
+    }
 }
