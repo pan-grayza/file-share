@@ -21,6 +21,9 @@
     async function stop_server() {
         serverStatus = await invoke('stop_file_server')
     }
+    async function watch_directory() {
+        serverStatus = await invoke('watch_directory')
+    }
 </script>
 
 <div class="">
@@ -38,6 +41,7 @@
     <button on:click={start_server}>Start</button>
     <button on:click={stop_server}>Stop</button>
     <p>{serverStatus}</p>
+    <button on:click={watch_directory}>watch directory</button>
 </div>
 
 <style>

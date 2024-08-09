@@ -15,12 +15,18 @@ crate-type = ["lib", "cdylib", "staticlib"]
 tauri-build = { version = "2.0.0-beta", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-beta", features = [] }
-tauri-plugin-shell = "2.0.0-beta"
+tauri = { version = "2.0.0-rc", features = [] }
+tauri-plugin-shell = "2.0.0-rc"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1.0.63"
 rfd = "0.14.1"
 warp = "0.3.7"
 tokio = { version = "1.39.2", features = ["full"] }
+reqwest = "0.12.5"
+notify = "6.1.1"
+sha2 = "0.10.8"
+notify-debouncer-full = "0.3.1"
+futures = "0.3.30"
+tauri-plugin-os = "2.0.0-rc.0"
 
